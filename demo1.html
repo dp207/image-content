@@ -1,0 +1,980 @@
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>表情包文案生成器 - 让你的图片更有趣</title>
+  <!-- Tailwind CSS v3 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <!-- html2canvas 用于合成图片（新增） -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <!-- 统一的 Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#FF6B6B',
+            secondary: '#4ECDC4',
+            accent: '#FFD166',
+            dark: '#292F36',
+            light: '#F7FFF7'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          animation: {
+            'bounce-slow': 'bounce 2s infinite',
+            'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+          },
+          keyframes: {
+            shake: {
+              '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+              '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+              '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+              '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-shadow {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .text-shadow-lg {
+        text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
+      }
+      .bg-blur {
+        backdrop-filter: blur(8px);
+      }
+      .transition-all-300 {
+        transition: all 0.3s ease;
+      }
+      .draggable-text {
+        cursor: move;
+        user-select: none;
+      }
+      .text-editing {
+        cursor: text;
+        border: 1px dashed #fff;
+        padding: 2px 8px;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-light to-gray-100 min-h-screen">
+  <!-- 导航栏 -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <img src="https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/b8ba042de4f247f5a01edc3411da5a90~tplv-a9rns2rl98-image.image?rcl=20251204220808F76795A8221EFC003596&amp;rk3s=8e244e95&amp;rrcfp=f06b921b&amp;x-expires=1767449321&amp;x-signature=81jyEytfIM6gb68DdvzPqF%2Bm%2F0g%3D" alt="Logo" class="h-10 w-10">
+        <h1 class="text-2xl font-bold text-dark">表情包文案生成器</h1>
+      </div>
+      <div class="hidden md:flex items-center space-x-6">
+        <a href="#" class="text-gray-600 hover:text-primary transition-all-300">首页</a>
+        <a href="#features" class="text-gray-600 hover:text-primary transition-all-300">功能</a>
+        <a href="#examples" class="text-gray-600 hover:text-primary transition-all-300">示例</a>
+        <a href="#about" class="text-gray-600 hover:text-primary transition-all-300">关于</a>
+      </div>
+      <button id="theme-toggle" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all-300">
+        <i class="fa fa-moon-o text-gray-600"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 py-8">
+    <!-- 英雄区 -->
+    <section class="text-center mb-16">
+      <h2 class="text-4xl md:text-5xl font-bold mb-4 text-dark">让你的图片<span class="text-primary">更有趣</span></h2>
+      <p class="text-xl text-gray-600 max-w-3xl mx-auto">上传一张图片，AI 智能为你生成幽默有趣的表情包文案，支持拖拽调整位置、直接编辑文字，打造专属表情包！</p>
+    </section>
+
+    <!-- 工具区 -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+      <!-- 上传区 -->
+      <div class="bg-white rounded-xl shadow-lg p-6 transform transition-all hover:shadow-xl">
+        <h3 class="text-2xl font-bold mb-4 text-dark">上传图片</h3>
+        <div id="upload-container" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-all-300">
+          <input type="file" id="image-upload" class="hidden" accept="image/*">
+          <i class="fa fa-cloud-upload text-5xl text-gray-400 mb-4"></i>
+          <p class="text-gray-600 mb-2">点击或拖拽图片到这里</p>
+          <p class="text-sm text-gray-500">支持 JPG、PNG、GIF 格式</p>
+        </div>
+        <div id="upload-preview" class="hidden mt-4">
+          <h4 class="text-lg font-semibold mb-2">预览</h4>
+          <div class="relative">
+            <img id="preview-image" class="max-h-64 mx-auto rounded-lg" alt="预览图片">
+            <button id="remove-image" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-all-300">
+              <i class="fa fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div class="mt-6">
+          <button id="generate-btn" class="w-full bg-primary hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all-300 flex items-center justify-center">
+            <i class="fa fa-magic mr-2"></i> 生成文案
+          </button>
+        </div>
+      </div>
+
+      <!-- 结果区 -->
+      <div class="bg-white rounded-xl shadow-lg p-6 transform transition-all hover:shadow-xl">
+        <h3 class="text-2xl font-bold mb-4 text-dark">生成结果</h3>
+        <div id="result-container" class="min-h-[300px] flex items-center justify-center">
+          <div id="empty-result" class="text-center text-gray-500">
+            <i class="fa fa-comment-o text-5xl mb-4"></i>
+            <p>上传图片并点击生成按钮</p>
+          </div>
+          <div id="loading-result" class="hidden text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <p class="mt-4 text-gray-600">AI 正在努力思考中...</p>
+          </div>
+          <div id="meme-result" class="hidden w-full">
+            <!-- 新增 Canvas 容器用于合成图片（核心修改） -->
+            <div class="relative mb-4" id="meme-editor-container">
+              <img id="meme-image" class="w-full rounded-lg" alt="表情包结果">
+              <div id="meme-text-container" class="absolute inset-0 p-4">
+                <!-- 顶部文案（改为可拖拽、可编辑） -->
+                <div 
+                  id="top-text" 
+                  class="draggable-text text-white text-2xl font-bold text-shadow-lg text-center absolute top-4 left-1/2 -translate-x-1/2"
+                  contenteditable="false"
+                ></div>
+                <!-- 底部文案（改为可拖拽、可编辑） -->
+                <div 
+                  id="bottom-text" 
+                  class="draggable-text text-white text-2xl font-bold text-shadow-lg text-center absolute bottom-4 left-1/2 -translate-x-1/2"
+                  contenteditable="false"
+                ></div>
+              </div>
+            </div>
+            <!-- 新增编辑提示 -->
+            <div class="text-sm text-gray-500 mb-3">
+              <i class="fa fa-info-circle text-primary mr-1"></i>
+              拖拽文案调整位置 | 双击文案可直接编辑内容
+            </div>
+            <div class="flex space-x-2">
+              <button id="download-btn" class="flex-1 bg-secondary hover:bg-teal-500 text-white font-bold py-2 px-4 rounded-lg transition-all-300">
+                <i class="fa fa-download mr-2"></i> 下载
+              </button>
+              <button id="share-btn" class="flex-1 bg-accent hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg transition-all-300">
+                <i class="fa fa-share-alt mr-2"></i> 分享
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 文案选项区 -->
+    <section id="caption-options" class="bg-white rounded-xl shadow-lg p-6 mb-16 hidden">
+      <h3 class="text-2xl font-bold mb-4 text-dark">文案选项</h3>
+      <div id="captions-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 文案选项将在这里动态生成 -->
+      </div>
+      <div class="mt-6">
+        <h4 class="text-lg font-semibold mb-2">自定义文案</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="custom-top-text" class="block text-sm font-medium text-gray-700 mb-1">上方文案</label>
+            <input type="text" id="custom-top-text" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          <div>
+            <label for="custom-bottom-text" class="block text-sm font-medium text-gray-700 mb-1">下方文案</label>
+            <input type="text" id="custom-bottom-text" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+        </div>
+        <button id="apply-custom" class="mt-4 bg-secondary hover:bg-teal-500 text-white font-bold py-2 px-6 rounded-lg transition-all-300">
+          应用自定义文案
+        </button>
+      </div>
+    </section>
+
+    <!-- 样式设置区 -->
+    <section id="style-options" class="bg-white rounded-xl shadow-lg p-6 mb-16 hidden">
+      <h3 class="text-2xl font-bold mb-4 text-dark">样式设置</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="font-family" class="block text-sm font-medium text-gray-700 mb-1">字体</label>
+          <select id="font-family" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="Arial, sans-serif">默认</option>
+            <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+            <option value="'SimHei', sans-serif">黑体</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans</option>
+            <option value="'Impact', sans-serif">Impact</option>
+          </select>
+        </div>
+        <div>
+          <label for="font-size" class="block text-sm font-medium text-gray-700 mb-1">字体大小</label>
+          <input type="range" id="font-size" min="12" max="48" value="24" class="w-full">
+          <div class="flex justify-between text-xs text-gray-500">
+            <span>小</span>
+            <span>大</span>
+          </div>
+        </div>
+        <div>
+          <label for="text-color" class="block text-sm font-medium text-gray-700 mb-1">文字颜色</label>
+          <div class="grid grid-cols-6 gap-2">
+            <button class="color-option w-full h-8 rounded-full bg-white border border-gray-300" data-color="#FFFFFF"></button>
+            <button class="color-option w-full h-8 rounded-full bg-black" data-color="#000000"></button>
+            <button class="color-option w-full h-8 rounded-full bg-yellow-300" data-color="#FDE047"></button>
+            <button class="color-option w-full h-8 rounded-full bg-red-500" data-color="#EF4444"></button>
+            <button class="color-option w-full h-8 rounded-full bg-blue-500" data-color="#3B82F6"></button>
+            <button class="color-option w-full h-8 rounded-full bg-green-500" data-color="#10B981"></button>
+          </div>
+        </div>
+        <div>
+          <label for="stroke-color" class="block text-sm font-medium text-gray-700 mb-1">描边颜色</label>
+          <div class="grid grid-cols-6 gap-2">
+            <button class="stroke-option w-full h-8 rounded-full bg-black" data-color="#000000"></button>
+            <button class="stroke-option w-full h-8 rounded-full bg-white border border-gray-300" data-color="#FFFFFF"></button>
+            <button class="stroke-option w-full h-8 rounded-full bg-transparent border border-dashed border-gray-300" data-color="transparent"></button>
+            <button class="stroke-option w-full h-8 rounded-full bg-yellow-300" data-color="#FDE047"></button>
+            <button class="stroke-option w-full h-8 rounded-full bg-red-500" data-color="#EF4444"></button>
+            <button class="stroke-option w-full h-8 rounded-full bg-blue-500" data-color="#3B82F6"></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 示例区 -->
+    <section id="examples" class="mb-16">
+      <h3 class="text-3xl font-bold mb-6 text-dark">热门示例</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- 示例1 -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden transform transition-all hover:scale-105 hover:shadow-lg">
+          <img src="https://p3-doubao-search-sign.byteimg.com/labis/fdf592ddb976c8721aebabdca8fada1d~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1780409301&amp;x-signature=V6OPv6xuOG9rezJke7QCFg%2FvWG4%3D" alt="示例表情包" class="w-full h-48 object-cover">
+          <div class="p-4">
+            <h4 class="font-bold text-lg mb-1">生活总有起起落落</h4>
+            <p class="text-gray-600 text-sm">热门网络用语，表达生活中的起伏</p>
+          </div>
+        </div>
+        <!-- 示例2 -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden transform transition-all hover:scale-105 hover:shadow-lg">
+          <img src="https://p26-doubao-search-sign.byteimg.com/tos-cn-i-be4g95zd3a/2264610292496990221~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1780409300&amp;x-signature=ddskxNR9MGqKuCcQJUB6PhC6t6w%3D" alt="示例表情包" class="w-full h-48 object-cover">
+          <div class="p-4">
+            <h4 class="font-bold text-lg mb-1">我是谁？我在哪？</h4>
+            <p class="text-gray-600 text-sm">经典困惑表情，适用于各种迷茫场景</p>
+          </div>
+        </div>
+        <!-- 示例3 -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden transform transition-all hover:scale-105 hover:shadow-lg">
+          <img src="https://p26-doubao-search-sign.byteimg.com/tos-cn-i-be4g95zd3a/2266111100050997262~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1780409300&amp;x-signature=8DqgBfArcLX6wHZiZCPK8aBA%2FTg%3D" alt="示例表情包" class="w-full h-48 object-cover">
+          <div class="p-4">
+            <h4 class="font-bold text-lg mb-1">有钱真好</h4>
+            <p class="text-gray-600 text-sm">表达对财富的向往和调侃</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 功能介绍 -->
+    <section id="features" class="mb-16">
+      <h3 class="text-3xl font-bold mb-6 text-dark">功能特点</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- 特点1 -->
+        <div class="bg-white p-6 rounded-xl shadow-md transform transition-all hover:shadow-lg">
+          <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <i class="fa fa-image text-2xl text-primary"></i>
+          </div>
+          <h4 class="text-xl font-bold mb-2">简单上传</h4>
+          <p class="text-gray-600">支持多种图片格式，拖拽或点击上传，操作简单便捷</p>
+        </div>
+        <!-- 特点2 -->
+        <div class="bg-white p-6 rounded-xl shadow-md transform transition-all hover:shadow-lg">
+          <div class="w-14 h-14 bg-secondary/10 rounded-full flex items-center justify-center mb-4">
+            <i class="fa fa-lightbulb-o text-2xl text-secondary"></i>
+          </div>
+          <h4 class="text-xl font-bold mb-2">AI 智能生成</h4>
+          <p class="text-gray-600">基于图片内容智能分析，生成符合场景的幽默文案</p>
+        </div>
+        <!-- 特点3（新增拖拽编辑） -->
+        <div class="bg-white p-6 rounded-xl shadow-md transform transition-all hover:shadow-lg">
+          <div class="w-14 h-14 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <i class="fa fa-mouse-pointer text-2xl text-accent"></i>
+          </div>
+          <h4 class="text-xl font-bold mb-2">拖拽式编辑</h4>
+          <p class="text-gray-600">支持拖拽调整文案位置、双击直接编辑文字，灵活定制</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 关于我们 -->
+    <section id="about" class="bg-white rounded-xl shadow-lg p-8 mb-16">
+      <h3 class="text-3xl font-bold mb-4 text-dark">关于我们</h3>
+      <p class="text-gray-600 mb-4">表情包文案生成器是一个专注于让社交互动更加有趣的工具。我们利用先进的 AI 技术，为用户提供智能化的表情包文案生成服务，支持拖拽编辑、样式定制，帮助用户在社交媒体上更加生动地表达自己的情感和想法。</p>
+      <p class="text-gray-600">无论你是想制作搞笑表情包、温馨祝福图，还是想要在朋友圈中脱颖而出，我们都能为你提供合适的文案建议和灵活的编辑能力。让我们一起，让表达更有趣！</p>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-dark text-white py-8">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <h4 class="text-xl font-bold mb-4">表情包文案生成器</h4>
+          <p class="text-gray-400">让你的图片更有趣</p>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold mb-4">快速链接</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-all-300">首页</a></li>
+            <li><a href="#features" class="text-gray-400 hover:text-white transition-all-300">功能</a></li>
+            <li><a href="#examples" class="text-gray-400 hover:text-white transition-all-300">示例</a></li>
+            <li><a href="#about" class="text-gray-400 hover:text-white transition-all-300">关于</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold mb-4">联系我们</h4>
+          <ul class="space-y-2">
+            <li class="flex items-center"><i class="fa fa-envelope mr-2"></i> <a href="mailto:info@memegen.com" class="text-gray-400 hover:text-white transition-all-300">info@memegen.com</a></li>
+            <li class="flex items-center"><i class="fa fa-weixin mr-2"></i> <span class="text-gray-400">MemeGenOfficial</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-500">
+        <p>© 2025 表情包文案生成器. 保留所有权利.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 分享模态框 -->
+  <div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">分享表情包</h3>
+        <button id="close-share-modal" class="text-gray-500 hover:text-gray-700">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <div class="mb-4">
+        <img id="share-image" class="w-full rounded-lg mb-4" alt="分享图片">
+        <div class="flex justify-center space-x-4">
+          <button class="share-platform w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition-all-300">
+            <i class="fa fa-weixin text-xl"></i>
+          </button>
+          <button class="share-platform w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 transition-all-300">
+            <i class="fa fa-qq text-xl"></i>
+          </button>
+          <button class="share-platform w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-all-300">
+            <i class="fa fa-weibo text-xl"></i>
+          </button>
+          <button class="share-platform w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-white hover:bg-gray-800 transition-all-300">
+            <i class="fa fa-link text-xl"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 示例文案数据
+    const captionTemplates = [
+      {
+        type: 'confused',
+        top: ['我是谁？', '这是什么？', '发生了什么？', '我在哪？', '为什么？'],
+        bottom: ['我在哪？', '我在干什么？', '这不是真的', '我不理解', '谁能告诉我']
+      },
+      {
+        type: 'happy',
+        top: ['太棒了！', '开心到飞起', '今天运气真好', '终于等到了', '太幸福了'],
+        bottom: ['生活真美好', '感觉人生到达了巅峰', '这就是快乐星球', '爱了爱了', '幸福来得太突然']
+      },
+      {
+        type: 'sad',
+        top: ['太难了', '我太难了', '生活不易', '为什么受伤的总是我', '心好累'],
+        bottom: ['成年人的世界', '生活总有起起落落', '我需要抱抱', '让我静一静', '人生好难']
+      },
+      {
+        type: 'angry',
+        top: ['气死我了', '这也太过分了', '不能忍', '火冒三丈', '太气人了'],
+        bottom: ['我要爆炸了', '什么玩意儿', '简直不可理喻', '无法理解', '气到变形']
+      },
+      {
+        type: 'surprised',
+        top: ['我的天', '震惊', '不敢相信', '哇塞', '这也太神奇了'],
+        bottom: ['太意外了', '惊掉下巴', '大开眼界', '活久见', '刷新认知']
+      },
+      {
+        type: 'disgusted',
+        top: ['太恶心了', '不忍直视', '什么鬼', '没眼看', '口区'],
+        bottom: ['辣眼睛', '无法接受', '这也太那啥了', '我需要洗洗眼', '告辞']
+      },
+      {
+        type: 'tired',
+        top: ['好累', '想睡觉', '没精神', '疲惫', '困成狗'],
+        bottom: ['让我睡个三天三夜', '不想动', '身心俱疲', '需要充电', '累觉不爱']
+      },
+      {
+        type: 'thinking',
+        top: ['让我想想', '思考人生', '有点意思', '细思极恐', '值得深思'],
+        bottom: ['这是个问题', '有点道理', '原来如此', '恍然大悟', '我好像明白了']
+      },
+      {
+        type: 'excited',
+        top: ['兴奋到模糊', '迫不及待', '跃跃欲试', '摩拳擦掌', '蓄势待发'],
+        bottom: ['准备好出发了', '我可以', '冲鸭', '加油加油', '看好我']
+      },
+      {
+        type: 'love',
+        top: ['好喜欢你', '爱了爱了', '我的小心心', '么么哒', '甜蜜蜜'],
+        bottom: ['这就是爱情', '心花怒放', '小鹿乱撞', '幸福满满', '你是我的菜']
+      }
+    ];
+
+    // 流行网络用语
+    const popularPhrases = [
+      '生活总有起起落落',
+      '我太难了',
+      '奥利给',
+      '干就完事了',
+      '这也太真实了',
+      '绝了',
+      'awsl',
+      '我可以',
+      '冲鸭',
+      '爱了爱了',
+      '什么鬼',
+      '简直不敢相信',
+      '太秀了',
+      '学到了',
+      '打扰了',
+      '告辞',
+      '溜了溜了',
+      '惹不起惹不起',
+      '瑟瑟发抖',
+      '卑微',
+      '柠檬精',
+      '我酸了',
+      '雨女无瓜',
+      '你品，你细品',
+      '有内味了',
+      '安排',
+      '上头',
+      '真香',
+      '我佛了',
+      '心态崩了',
+      '我枯了',
+      '我裂开了',
+      '快乐星球',
+      '打工人',
+      '尾款人',
+      '工具人',
+      '网抑云',
+      '云监工',
+      '专业团队',
+      '后浪',
+      '集美',
+      '逆行者',
+      '双节棍',
+      'city不city',
+      '偷感十足',
+      '浓人淡人',
+      '已读乱回',
+      '蛐蛐',
+      '硬控',
+      '配享太庙',
+      '北京到底有谁在啊'
+    ];
+
+    // DOM 元素
+    const uploadContainer = document.getElementById('upload-container');
+    const imageUpload = document.getElementById('image-upload');
+    const uploadPreview = document.getElementById('upload-preview');
+    const previewImage = document.getElementById('preview-image');
+    const removeImage = document.getElementById('remove-image');
+    const generateBtn = document.getElementById('generate-btn');
+    const resultContainer = document.getElementById('result-container');
+    const emptyResult = document.getElementById('empty-result');
+    const loadingResult = document.getElementById('loading-result');
+    const memeResult = document.getElementById('meme-result');
+    const memeImage = document.getElementById('meme-image');
+    const topText = document.getElementById('top-text');
+    const bottomText = document.getElementById('bottom-text');
+    const downloadBtn = document.getElementById('download-btn');
+    const shareBtn = document.getElementById('share-btn');
+    const captionOptions = document.getElementById('caption-options');
+    const captionsContainer = document.getElementById('captions-container');
+    const styleOptions = document.getElementById('style-options');
+    const shareModal = document.getElementById('share-modal');
+    const closeShareModal = document.getElementById('close-share-modal');
+    const shareImage = document.getElementById('share-image');
+    const themeToggle = document.getElementById('theme-toggle');
+    const customTopText = document.getElementById('custom-top-text');
+    const customBottomText = document.getElementById('custom-bottom-text');
+    const applyCustomBtn = document.getElementById('apply-custom');
+    const fontFamily = document.getElementById('font-family');
+    const fontSize = document.getElementById('font-size');
+    const colorOptions = document.querySelectorAll('.color-option');
+    const strokeOptions = document.querySelectorAll('.stroke-option');
+    const memeEditorContainer = document.getElementById('meme-editor-container');
+
+    // 当前状态
+    let currentImage = null;
+    let currentCaptions = [];
+    let currentTextColor = '#FFFFFF';
+    let currentStrokeColor = '#000000';
+    // 拖拽相关状态
+    let draggingElement = null;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    // 初始化
+    function init() {
+      // 上传区域点击事件
+      uploadContainer.addEventListener('click', () => {
+        imageUpload.click();
+      });
+
+      // 拖拽上传
+      uploadContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadContainer.classList.add('border-primary');
+      });
+
+      uploadContainer.addEventListener('dragleave', () => {
+        uploadContainer.classList.remove('border-primary');
+      });
+
+      uploadContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadContainer.classList.remove('border-primary');
+        
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleImageUpload(e.dataTransfer.files[0]);
+        }
+      });
+
+      // 文件选择事件
+      imageUpload.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleImageUpload(e.target.files[0]);
+        }
+      });
+
+      // 移除图片
+      removeImage.addEventListener('click', () => {
+        resetUpload();
+      });
+
+      // 生成文案按钮
+      generateBtn.addEventListener('click', generateCaptions);
+
+      // 下载按钮（改为合成图片下载）
+      downloadBtn.addEventListener('click', downloadMeme);
+
+      // 分享按钮
+      shareBtn.addEventListener('click', () => {
+        // 合成图片后再分享
+        generateMemeImage().then(dataUrl => {
+          shareImage.src = dataUrl;
+          shareModal.classList.remove('hidden');
+        });
+      });
+
+      // 关闭分享模态框
+      closeShareModal.addEventListener('click', () => {
+        shareModal.classList.add('hidden');
+      });
+
+      // 点击模态框外部关闭
+      shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) {
+          shareModal.classList.add('hidden');
+        }
+      });
+
+      // 应用自定义文案
+      applyCustomBtn.addEventListener('click', () => {
+        topText.textContent = customTopText.value;
+        bottomText.textContent = customBottomText.value;
+      });
+
+      // 字体设置
+      fontFamily.addEventListener('change', updateTextStyle);
+      fontSize.addEventListener('input', updateTextStyle);
+
+      // 颜色选择
+      colorOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          currentTextColor = option.dataset.color;
+          colorOptions.forEach(opt => opt.classList.remove('ring-2', 'ring-primary'));
+          option.classList.add('ring-2', 'ring-primary');
+          updateTextStyle();
+        });
+      });
+
+      // 描边颜色选择
+      strokeOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          currentStrokeColor = option.dataset.color;
+          strokeOptions.forEach(opt => opt.classList.remove('ring-2', 'ring-primary'));
+          option.classList.add('ring-2', 'ring-primary');
+          updateTextStyle();
+        });
+      });
+
+      // 主题切换
+      themeToggle.addEventListener('click', toggleTheme);
+
+      // 分享平台点击事件
+      document.querySelectorAll('.share-platform').forEach(platform => {
+        platform.addEventListener('click', () => {
+          const platformName = platform.querySelector('i').className;
+          shareMeme(platformName);
+        });
+      });
+
+      // 初始化文案拖拽功能（核心新增）
+      initTextDrag([topText, bottomText]);
+      // 初始化文案双击编辑功能（核心新增）
+      initTextEdit([topText, bottomText]);
+    }
+
+    // 初始化文案拖拽功能
+    function initTextDrag(elements) {
+      elements.forEach(el => {
+        // 鼠标按下开始拖拽
+        el.addEventListener('mousedown', (e) => {
+          // 排除编辑状态下的拖拽
+          if (el.isContentEditable) return;
+          
+          draggingElement = el;
+          // 计算鼠标相对于元素左上角的偏移
+          const rect = el.getBoundingClientRect();
+          offsetX = e.clientX - rect.left;
+          offsetY = e.clientY - rect.top;
+          
+          // 添加拖拽样式
+          el.classList.add('opacity-80');
+          document.body.style.cursor = 'move';
+        });
+      });
+
+      // 鼠标移动时拖拽元素
+      document.addEventListener('mousemove', (e) => {
+        if (!draggingElement) return;
+        
+        e.preventDefault();
+        // 获取编辑器容器位置
+        const containerRect = memeEditorContainer.getBoundingClientRect();
+        // 计算元素新位置（限制在容器内）
+        const x = Math.max(0, Math.min(e.clientX - containerRect.left - offsetX, containerRect.width - draggingElement.offsetWidth));
+        const y = Math.max(0, Math.min(e.clientY - containerRect.top - offsetY, containerRect.height - draggingElement.offsetHeight));
+        
+        // 更新元素位置
+        draggingElement.style.left = `${x}px`;
+        draggingElement.style.top = `${y}px`;
+        draggingElement.style.transform = 'none'; // 清除默认居中
+      });
+
+      // 鼠标松开结束拖拽
+      document.addEventListener('mouseup', () => {
+        if (draggingElement) {
+          draggingElement.classList.remove('opacity-80');
+          draggingElement = null;
+          document.body.style.cursor = 'default';
+        }
+      });
+    }
+
+    // 初始化文案双击编辑功能
+    function initTextEdit(elements) {
+      elements.forEach(el => {
+        el.addEventListener('dblclick', () => {
+          // 开启编辑模式
+          el.contentEditable = true;
+          el.classList.add('text-editing');
+          el.focus();
+          
+          // 选中所有文字
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(el);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        });
+
+        // 失去焦点关闭编辑
+        el.addEventListener('blur', () => {
+          el.contentEditable = false;
+          el.classList.remove('text-editing');
+          // 同步到自定义输入框
+          if (el === topText) {
+            customTopText.value = el.textContent;
+          } else {
+            customBottomText.value = el.textContent;
+          }
+        });
+
+        // 按回车关闭编辑
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            el.blur();
+          }
+        });
+      });
+    }
+
+    // 处理图片上传
+    function handleImageUpload(file) {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        currentImage = e.target.result;
+        previewImage.src = currentImage;
+        uploadPreview.classList.remove('hidden');
+        uploadContainer.classList.add('border-primary');
+        generateBtn.disabled = false;
+      };
+      
+      reader.readAsDataURL(file);
+    }
+
+    // 重置上传区域
+    function resetUpload() {
+      currentImage = null;
+      imageUpload.value = '';
+      previewImage.src = '';
+      uploadPreview.classList.add('hidden');
+      uploadContainer.classList.remove('border-primary');
+      generateBtn.disabled = true;
+      
+      // 重置结果区域
+      resultContainer.classList.remove('animate-shake');
+      emptyResult.classList.remove('hidden');
+      loadingResult.classList.add('hidden');
+      memeResult.classList.add('hidden');
+      captionOptions.classList.add('hidden');
+      styleOptions.classList.add('hidden');
+      
+      // 重置文案位置和内容
+      topText.textContent = '';
+      bottomText.textContent = '';
+      topText.style.left = '50%';
+      topText.style.top = '4px';
+      topText.style.transform = 'translateX(-50%)';
+      bottomText.style.left = '50%';
+      bottomText.style.bottom = '4px';
+      bottomText.style.transform = 'translateX(-50%)';
+      customTopText.value = '';
+      customBottomText.value = '';
+    }
+
+    // 生成文案
+    // function generateCaptions() {
+    //   if (!currentImage) return;
+      
+    //   // 显示加载状态
+    //   emptyResult.classList.add('hidden');
+    //   loadingResult.classList.remove('hidden');
+    //   memeResult.classList.add('hidden');
+      
+    //   // 模拟 API 请求延迟
+    //   setTimeout(() => {
+    //     // 随机选择文案类型
+    //     const randomType = captionTemplates[Math.floor(Math.random() * captionTemplates.length)];
+    //     const randomPopular = popularPhrases[Math.floor(Math.random() * popularPhrases.length)];
+        
+    //     // 生成 5 组文案
+    //     currentCaptions = [];
+    //     for (let i = 0; i < 5; i++) {
+    //       const top = i === 0 ? randomPopular : randomType.top[Math.floor(Math.random() * randomType.top.length)];
+    //       const bottom = randomType.bottom[Math.floor(Math.random() * randomType.bottom.length)];
+    //       currentCaptions.push({ top, bottom });
+    //     }
+        
+    //     // 显示第一组文案
+    //     topText.textContent = currentCaptions[0].top;
+    //     bottomText.textContent = currentCaptions[0].bottom;
+    //     // 重置文案位置
+    //     topText.style.left = '50%';
+    //     topText.style.top = '4px';
+    //     topText.style.transform = 'translateX(-50%)';
+    //     bottomText.style.left = '50%';
+    //     bottomText.style.top = 'auto';
+    //     bottomText.style.bottom = '4px';
+    //     bottomText.style.transform = 'translateX(-50%)';
+        
+    //     // 同步到自定义输入框
+    //     customTopText.value = currentCaptions[0].top;
+    //     customBottomText.value = currentCaptions[0].bottom;
+        
+    //     // 更新图片
+    //     memeImage.src = currentImage;
+        
+    //     // 显示结果
+    //     loadingResult.classList.add('hidden');
+    //     memeResult.classList.remove('hidden');
+        
+    //     // 显示文案选项
+    //     renderCaptionOptions();
+    //     captionOptions.classList.remove('hidden');
+    //     styleOptions.classList.remove('hidden');
+        
+    //     // 更新文字样式
+    //     updateTextStyle();
+    //   }, 1500);
+    // }
+// 替换原来的 generateCaptions 函数
+async function generateCaptions() {
+  if (!currentImage) return;
+
+  // 显示加载状态
+  emptyResult.classList.add('hidden');
+  loadingResult.classList.remove('hidden');
+  memeResult.classList.add('hidden');
+
+  try {
+    // 构造FormData上传图片
+    const formData = new FormData();
+    // 将base64转为Blob对象
+    const blob = await fetch(currentImage).then(res => res.blob());
+    formData.append('image', blob, 'meme-image.png');
+
+    // 调用后端接口
+    const response = await fetch('http://localhost:3000/api/generate', {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      currentCaptions = result.captions;
+      // 显示第一组文案
+      topText.textContent = currentCaptions[0].top;
+      bottomText.textContent = currentCaptions[0].bottom;
+      // 同步到自定义输入框
+      customTopText.value = currentCaptions[0].top;
+      customBottomText.value = currentCaptions[0].bottom;
+      // 重置文案位置
+      topText.style.left = '50%';
+      topText.style.top = '4px';
+      topText.style.transform = 'translateX(-50%)';
+      bottomText.style.left = '50%';
+      bottomText.style.top = 'auto';
+      bottomText.style.bottom = '4px';
+      bottomText.style.transform = 'translateX(-50%)';
+      // 更新图片
+      memeImage.src = currentImage;
+      // 显示结果
+      loadingResult.classList.add('hidden');
+      memeResult.classList.remove('hidden');
+      // 渲染文案选项
+      renderCaptionOptions();
+      captionOptions.classList.remove('hidden');
+      styleOptions.classList.remove('hidden');
+      // 更新文字样式
+      updateTextStyle();
+    } else {
+      alert('文案生成失败，请重试');
+      loadingResult.classList.add('hidden');
+      emptyResult.classList.remove('hidden');
+    }
+  } catch (error) {
+    console.error(error);
+    alert('接口调用失败');
+    loadingResult.classList.add('hidden');
+    emptyResult.classList.remove('hidden');
+  }
+}
+    // 渲染文案选项
+    function renderCaptionOptions() {
+      captionsContainer.innerHTML = '';
+      
+      currentCaptions.forEach((caption, index) => {
+        const captionCard = document.createElement('div');
+        captionCard.className = `p-3 border rounded-lg cursor-pointer transition-all ${index === 0 ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary hover:bg-primary/5'}`;
+        captionCard.innerHTML = `
+          <div class="text-center">
+            <p class="font-bold mb-1">${caption.top}</p>
+            <p>${caption.bottom}</p>
+          </div>
+        `;
+        
+        captionCard.addEventListener('click', () => {
+          topText.textContent = caption.top;
+          bottomText.textContent = caption.bottom;
+          customTopText.value = caption.top;
+          customBottomText.value = caption.bottom;
+          
+          // 更新选中状态
+          document.querySelectorAll('#captions-container > div').forEach(card => {
+            card.classList.remove('border-primary', 'bg-primary/5');
+            card.classList.add('border-gray-200');
+          });
+          captionCard.classList.remove('border-gray-200');
+          captionCard.classList.add('border-primary', 'bg-primary/5');
+        });
+        
+        captionsContainer.appendChild(captionCard);
+      });
+    }
+
+    // 更新文案样式
+    function updateTextStyle() {
+      const style = `
+        font-family: ${fontFamily.value};
+        font-size: ${fontSize.value}px;
+        color: ${currentTextColor};
+        -webkit-text-stroke: ${currentStrokeColor === 'transparent' ? '0' : '1px'} ${currentStrokeColor};
+      `;
+      
+      topText.style.cssText += style;
+      bottomText.style.cssText += style;
+    }
+
+    // 生成表情包图片（使用html2canvas合成）
+    function generateMemeImage() {
+      return new Promise((resolve) => {
+        html2canvas(memeEditorContainer, {
+          backgroundColor: null,
+          scale: 2, // 高清生成
+          useCORS: true
+        }).then(canvas => {
+          const dataUrl = canvas.toDataURL('image/png');
+          resolve(dataUrl);
+        });
+      });
+    }
+
+    // 下载表情包
+    function downloadMeme() {
+      generateMemeImage().then(dataUrl => {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = 'meme-' + Date.now() + '.png';
+        link.click();
+      });
+    }
+
+    // 分享表情包
+    function shareMeme(platform) {
+      // 在实际应用中，这里会实现不同平台的分享功能
+      alert(`分享到 ${platform} 功能正在开发中，敬请期待！`);
+      shareModal.classList.add('hidden');
+    }
+
+    // 切换主题
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      
+      if (document.body.classList.contains('dark')) {
+        themeToggle.innerHTML = '<i class="fa fa-sun-o text-yellow-300"></i>';
+        // 在实际应用中，这里会更新更多的主题样式
+      } else {
+        themeToggle.innerHTML = '<i class="fa fa-moon-o text-gray-600"></i>';
+      }
+    }
+
+    // 初始化应用
+    init();
+  </script>
+
+</body>
+</html>
