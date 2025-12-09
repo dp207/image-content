@@ -141,13 +141,7 @@
                 <!-- 顶部文案（改为可拖拽、可编辑） -->
                 <div 
                   id="top-text" 
-                  class="draggable-text text-white text-2xl font-bold text-shadow-lg text-center absolute top-4 left-1/2 -translate-x-1/2"
-                  contenteditable="false"
-                ></div>
-                <!-- 底部文案（改为可拖拽、可编辑） -->
-                <div 
-                  id="bottom-text" 
-                  class="draggable-text text-white text-2xl font-bold text-shadow-lg text-center absolute bottom-4 left-1/2 -translate-x-1/2"
+                  class="draggable-text text-white text-2xl font-bold text-shadow-lg text-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                   contenteditable="false"
                 ></div>
               </div>
@@ -180,12 +174,8 @@
         <h4 class="text-lg font-semibold mb-2">自定义文案</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label for="custom-top-text" class="block text-sm font-medium text-gray-700 mb-1">上方文案</label>
+            <label for="custom-top-text" class="block text-sm font-medium text-gray-700 mb-1">文案</label>
             <input type="text" id="custom-top-text" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
-          </div>
-          <div>
-            <label for="custom-bottom-text" class="block text-sm font-medium text-gray-700 mb-1">下方文案</label>
-            <input type="text" id="custom-bottom-text" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
           </div>
         </div>
         <button id="apply-custom" class="mt-4 bg-secondary hover:bg-teal-500 text-white font-bold py-2 px-6 rounded-lg transition-all-300">
@@ -591,7 +581,6 @@
       // 应用自定义文案
       applyCustomBtn.addEventListener('click', () => {
         topText.textContent = customTopText.value;
-        bottomText.textContent = customBottomText.value;
       });
 
       // 字体设置
@@ -755,15 +744,10 @@
       
       // 重置文案位置和内容
       topText.textContent = '';
-      bottomText.textContent = '';
       topText.style.left = '50%';
       topText.style.top = '4px';
       topText.style.transform = 'translateX(-50%)';
-      bottomText.style.left = '50%';
-      bottomText.style.bottom = '4px';
-      bottomText.style.transform = 'translateX(-50%)';
       customTopText.value = '';
-      customBottomText.value = '';
     }
 
     // 生成文案
@@ -847,19 +831,13 @@ async function generateCaptions() {
     if (result.success) {
       currentCaptions = result.captions;
       // 显示第一组文案
-      topText.textContent = currentCaptions[0].top;
-      bottomText.textContent = currentCaptions[0].bottom;
-      // 同步到自定义输入框
-      customTopText.value = currentCaptions[0].top;
-      customBottomText.value = currentCaptions[0].bottom;
-      // 重置文案位置
-      topText.style.left = '50%';
-      topText.style.top = '4px';
-      topText.style.transform = 'translateX(-50%)';
-      bottomText.style.left = '50%';
-      bottomText.style.top = 'auto';
-      bottomText.style.bottom = '4px';
-      bottomText.style.transform = 'translateX(-50%)';
+              topText.textContent = currentCaptions[0].top;
+              // 同步到自定义输入框
+              customTopText.value = currentCaptions[0].top;
+              // 重置文案位置
+              topText.style.left = '50%';
+              topText.style.top = '50%'; // 垂直居中
+              topText.style.transform = 'translate(-50%, -50%)'; // 垂直居中
       // 更新图片
       memeImage.src = currentImage;
       // 显示结果
@@ -891,26 +869,23 @@ async function generateCaptions() {
         const captionCard = document.createElement('div');
         captionCard.className = `p-3 border rounded-lg cursor-pointer transition-all ${index === 0 ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary hover:bg-primary/5'}`;
         captionCard.innerHTML = `
-          <div class="text-center">
-            <p class="font-bold mb-1">${caption.top}</p>
-            <p>${caption.bottom}</p>
-          </div>
-        `;
-        
-        captionCard.addEventListener('click', () => {
-          topText.textContent = caption.top;
-          bottomText.textContent = caption.bottom;
-          customTopText.value = caption.top;
-          customBottomText.value = caption.bottom;
+            <div class="text-center">
+              <p class="font-bold mb-1">${caption.top}</p>
+            </div>
+          `;
           
-          // 更新选中状态
-          document.querySelectorAll('#captions-container > div').forEach(card => {
-            card.classList.remove('border-primary', 'bg-primary/5');
-            card.classList.add('border-gray-200');
+          captionCard.addEventListener('click', () => {
+            topText.textContent = caption.top;
+            customTopText.value = caption.top;
+            
+            // 更新选中状态
+            document.querySelectorAll('#captions-container > div').forEach(card => {
+              card.classList.remove('border-primary', 'bg-primary/5');
+              card.classList.add('border-gray-200');
+            });
+            captionCard.classList.remove('border-gray-200');
+            captionCard.classList.add('border-primary', 'bg-primary/5');
           });
-          captionCard.classList.remove('border-gray-200');
-          captionCard.classList.add('border-primary', 'bg-primary/5');
-        });
         
         captionsContainer.appendChild(captionCard);
       });
@@ -926,7 +901,6 @@ async function generateCaptions() {
       `;
       
       topText.style.cssText += style;
-      bottomText.style.cssText += style;
     }
 
     // 生成表情包图片（使用html2canvas合成）

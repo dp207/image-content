@@ -108,7 +108,7 @@ async function recognizeImage(imagePath) {
 // 3. 通义千问生成表情包文案
 async function generateCaption(imageLabels) {
   const startTime = Date.now();
-  const prompt = `根据图片标签：${imageLabels}，生成5组幽默，每组文案包含顶部文字和底部文字，格式为JSON数组：[{"top":"顶部文案","bottom":"底部文案"}]`;
+  const prompt = `根据图片标签：${imageLabels}，生成5组幽默的表情包文案，要简单精髓，每组文案在10字以内，格式为JSON数组：[{"caption":"文案1"}, {"caption":"文案2"}]`;
   
   const response = await axios.post('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', {
     model: 'qwen-plus', // 免费的轻量版模型
@@ -146,7 +146,7 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
     // 3. 删除临时文件
     fs.unlinkSync(req.file.path);
     // 4. 返回结果
-    res.json({ success: true, labels, captions });
+    res.json({ success: true, labels, captions: captions.map(c => ({ top: c.caption, bottom: '' })) });
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: '生成失败' });
