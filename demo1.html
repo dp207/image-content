@@ -136,13 +136,13 @@
           <div id="meme-result" class="hidden w-full">
             <!-- 新增 Canvas 容器用于合成图片（核心修改） -->
             <div class="relative mb-4" id="meme-editor-container">
-              <img id="meme-image" class="w-full rounded-lg" alt="表情包结果">
+              <img id="meme-image" class="w-full rounded-lg" alt="表情包结果" style="pointer-events: none;">
               <div id="meme-text-container" class="absolute inset-0 p-4">
                 <!-- 顶部文案（改为可拖拽、可编辑） -->
                 <div 
                   id="top-text" 
-                  class="draggable-text text-white text-2xl font-bold text-shadow-lg text-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                  contenteditable="false"
+                  class="draggable-text text-white text-2xl font-bold text-shadow-lg text-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+                  contenteditable="true"
                 ></div>
               </div>
             </div>
@@ -172,7 +172,7 @@
       </div>
       <div class="mt-6">
         <h4 class="text-lg font-semibold mb-2">自定义文案</h4>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4">
           <div>
             <label for="custom-top-text" class="block text-sm font-medium text-gray-700 mb-1">文案</label>
             <input type="text" id="custom-top-text" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
@@ -484,7 +484,6 @@
     const memeResult = document.getElementById('meme-result');
     const memeImage = document.getElementById('meme-image');
     const topText = document.getElementById('top-text');
-    const bottomText = document.getElementById('bottom-text');
     const downloadBtn = document.getElementById('download-btn');
     const shareBtn = document.getElementById('share-btn');
     const captionOptions = document.getElementById('caption-options');
@@ -495,7 +494,6 @@
     const shareImage = document.getElementById('share-image');
     const themeToggle = document.getElementById('theme-toggle');
     const customTopText = document.getElementById('custom-top-text');
-    const customBottomText = document.getElementById('custom-bottom-text');
     const applyCustomBtn = document.getElementById('apply-custom');
     const fontFamily = document.getElementById('font-family');
     const fontSize = document.getElementById('font-size');
@@ -619,9 +617,9 @@
       });
 
       // 初始化文案拖拽功能（核心新增）
-      initTextDrag([topText, bottomText]);
+      initTextDrag([topText]);
       // 初始化文案双击编辑功能（核心新增）
-      initTextEdit([topText, bottomText]);
+      initTextEdit([topText]);
     }
 
     // 初始化文案拖拽功能
@@ -695,8 +693,6 @@
           // 同步到自定义输入框
           if (el === topText) {
             customTopText.value = el.textContent;
-          } else {
-            customBottomText.value = el.textContent;
           }
         });
 
@@ -831,13 +827,13 @@ async function generateCaptions() {
     if (result.success) {
       currentCaptions = result.captions;
       // 显示第一组文案
-              topText.textContent = currentCaptions[0].top;
-              // 同步到自定义输入框
-              customTopText.value = currentCaptions[0].top;
-              // 重置文案位置
-              topText.style.left = '50%';
-              topText.style.top = '50%'; // 垂直居中
-              topText.style.transform = 'translate(-50%, -50%)'; // 垂直居中
+      topText.textContent = currentCaptions[0].top;
+      // 同步到自定义输入框
+      customTopText.value = currentCaptions[0].top;
+      // 重置文案位置
+      topText.style.left = '50%';
+      topText.style.top = '4px';
+      topText.style.transform = 'translateX(-50%)';
       // 更新图片
       memeImage.src = currentImage;
       // 显示结果
@@ -869,23 +865,23 @@ async function generateCaptions() {
         const captionCard = document.createElement('div');
         captionCard.className = `p-3 border rounded-lg cursor-pointer transition-all ${index === 0 ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary hover:bg-primary/5'}`;
         captionCard.innerHTML = `
-            <div class="text-center">
-              <p class="font-bold mb-1">${caption.top}</p>
-            </div>
-          `;
+          <div class="text-center">
+            <p class="font-bold mb-1">${caption.top}</p>
+          </div>
+        `;
+        
+        captionCard.addEventListener('click', () => {
+          topText.textContent = caption.top;
+          customTopText.value = caption.top;
           
-          captionCard.addEventListener('click', () => {
-            topText.textContent = caption.top;
-            customTopText.value = caption.top;
-            
-            // 更新选中状态
-            document.querySelectorAll('#captions-container > div').forEach(card => {
-              card.classList.remove('border-primary', 'bg-primary/5');
-              card.classList.add('border-gray-200');
-            });
-            captionCard.classList.remove('border-gray-200');
-            captionCard.classList.add('border-primary', 'bg-primary/5');
+          // 更新选中状态
+          document.querySelectorAll('#captions-container > div').forEach(card => {
+            card.classList.remove('border-primary', 'bg-primary/5');
+            card.classList.add('border-gray-200');
           });
+          captionCard.classList.remove('border-gray-200');
+          captionCard.classList.add('border-primary', 'bg-primary/5');
+        });
         
         captionsContainer.appendChild(captionCard);
       });
